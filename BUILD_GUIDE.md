@@ -30,17 +30,23 @@ This guide walks you through building SpinTimer1 from scratch — from ordering 
 | 1 | PAM8403 mini amplifier board | A tiny pre-built audio amplifier module, widely available |
 | 1 | 28mm micro speaker | Match impedance to your PAM8403 (typically 4Ω or 8Ω) |
 | 1 | Blue LED | Forward voltage 3.0V–3.2V |
-| 1 | 220Ω resistor | The orange stripe tells you the resistance; this protects the LED |
+| 1 | 220Ω resistor | Protects the LED from excess current |
+| 1 | 10µF electrolytic capacitor | ≥10V rating. DC-blocking capacitor on the audio signal path — primary fix for idle speaker hiss. **Observe polarity** (see wiring section). |
+| 1 | 10kΩ resistor, 1/4W | Part of the optional RC low-pass audio filter — must be used together with the 100nF capacitor below |
+| 1 | 100nF ceramic capacitor | ≥5V rating. Part of the optional RC low-pass audio filter — must be used together with the 10kΩ resistor above. No polarity. |
 | — | Jumper wires or hookup wire | For connecting components together |
 | — | Breadboard (optional) | Useful for prototyping before soldering |
 | 1 | USB-C cable + 5V USB power adapter | Standard phone charger works fine |
 | 1 | Small magnet | To be attached to the centrifuge lid |
 
+> **On the audio filter components:** The 10µF electrolytic capacitor (C2) is the primary noise fix and should always be installed. The 10kΩ resistor (R1) and 100nF ceramic capacitor (C1) are an optional add-on — they reduce high-frequency PWM switching noise further, but are only needed if hiss persists after installing C2. R1 and C1 must always be used together; C1 alone without R1 does almost nothing.
+
 ### Tools
 
 - Soldering iron + solder (if making a permanent build)
+- Small piece of perfboard (for mounting the audio filter components neatly)
 - Wire strippers
-- Multimeter (helpful but not required)
+- Multimeter (recommended — useful for verifying capacitor polarity before soldering)
 - Computer with a USB port (Windows, Mac, or Linux)
 
 ---
@@ -71,13 +77,33 @@ The blue LED is connected to GPIO32 through a 220Ω resistor. The resistor is **
 
 The ESP32 generates audio by rapidly switching GPIO25 on and off at specific frequencies — this is called PWM (Pulse Width Modulation). The PAM8403 amplifier takes that weak signal and boosts it enough to drive a speaker at audible volume. The speaker converts the electrical signal into sound waves.
 
-> **Why GPIO25?** Audio on the ESP32 uses ADC2 (Analog-to-Digital Converter 2) pins, which share hardware with the WiFi radio. This is why WiFi is shut down before any audio plays — they cannot operate simultaneously.
+> **Why GPIO25?** Audio on the ESP32 uses the LEDC (LED Control) peripheral to generate PWM signals. The LEDC peripheral and the WiFi radio cannot reliably operate simultaneously on this hardware, which is why WiFi is shut down before any audio plays.
+
+### The Audio Filter (C2, R1, C1)
+
+Even when no alarm is playing, the ESP32's LEDC peripheral holds GPIO25 at a non-zero DC voltage. The PAM8403 faithfully amplifies whatever is on its input — including that idle DC offset — which produces an audible hiss or whine from the speaker at rest. Three passive components inserted in-line between GPIO25 and the PAM8403 input eliminate this:
+
+**C2 — 10µF electrolytic capacitor (primary fix, always install)**
+Placed in series on the signal wire, C2 blocks the DC offset from reaching the PAM8403 entirely. AC audio signals pass through freely; DC does not. This is the main cause of idle hiss and C2 alone should resolve it. Polarity matters — see the wiring section.
+
+**R1 + C1 — RC low-pass filter (optional, install if hiss persists)**
+R1 (10kΩ, in series) and C1 (100nF, from the signal wire to GND) work as a pair to form a passive filter that attenuates high-frequency PWM switching noise before it reaches the amplifier. These two must always be installed together — C1 alone without R1 is nearly ineffective.
+
+The complete signal path from ESP32 to amplifier is:
+
+```
+GPIO25 → R1 (10kΩ, in-line) → junction node → C2 (+) → C2 (−) → PAM8403 INL
+                                     │
+                                   C1 (100nF)
+                                     │
+                                    GND
+```
 
 ---
 
 ## 3. Wiring It Up
 
-Wire each connection as described below. If you're prototyping, use a breadboard and jumper wires. For a permanent install, solder the connections.
+Wire each connection as described below. If you're prototyping, use a breadboard and jumper wires. For a permanent install, solder the connections. The audio filter components (R1, C1, C2) are most neatly built on a small piece of perfboard and tucked inline on the signal wire between GPIO25 and the PAM8403.
 
 ### Reed Switch
 ```
@@ -92,11 +118,30 @@ ESP32 GPIO32  ───  220Ω Resistor  ───  LED Anode (longer leg, +)
 ESP32 GND     ───────────────────────  LED Cathode (shorter leg, −)
 ```
 
-### PAM8403 Amplifier
+### Audio Signal Path (GPIO25 → PAM8403)
+
+This is the section that includes the noise-suppression components. Wire it in order, left to right:
+
 ```
-ESP32 GPIO25  ───  PAM8403 INL  (Left audio input)
-ESP32 GND     ───  PAM8403 GND  (Signal ground — there may be two GND pins; use the one near INL)
+ESP32 GPIO25
+     │
+    [R1 — 10kΩ resistor, in-line]        ← optional, but needed if adding C1
+     │
+     ├──── [C1 — 100nF ceramic] ──── GND  ← optional, only useful alongside R1
+     │
+    [C2 — 10µF electrolytic, (+) leg toward GPIO25 side, (−) leg toward PAM8403]
+     │
+PAM8403 INL
+```
+
+> ⚠️ **C2 polarity is critical.** The positive (+) leg of C2 must face the GPIO25/R1 side (higher DC potential). The negative (−) leg faces the PAM8403 INL pin. Installing an electrolytic capacitor backwards can cause it to fail or be damaged. If you have a multimeter, measure the DC voltage on each side of the C2 location before soldering to confirm which side is higher — it should be the GPIO25 side.
+
+> If you are not installing R1 and C1, simply connect GPIO25 directly to the (+) leg of C2, and the (−) leg of C2 to PAM8403 INL.
+
+### PAM8403 Power
+```
 ESP32 5V/VIN  ───  PAM8403 VCC  (Power)
+ESP32 GND     ───  PAM8403 GND  (Signal ground — the one near INL)
 ESP32 GND     ───  PAM8403 GND  (Power ground)
 ```
 
@@ -114,7 +159,10 @@ PAM8403 L OUT−  ───  Speaker (−) terminal
 | GND | Reed Switch Leg 2 |
 | GPIO32 | 220Ω resistor → LED Anode (+) |
 | GND | LED Cathode (−) |
-| GPIO25 | PAM8403 INL |
+| GPIO25 | R1 (10kΩ) in-line → junction node |
+| Junction node | C1 (100nF ceramic) → GND |
+| Junction node | C2 (+) leg (10µF electrolytic) |
+| C2 (−) leg | PAM8403 INL (Left Audio In) |
 | GND | PAM8403 Signal GND |
 | 5V (VIN) | PAM8403 VCC |
 | GND | PAM8403 Power GND |
@@ -204,8 +252,39 @@ The web interface has three sections:
 Set the minutes and seconds for your centrifuge run. Both dropdowns go from 0 to 60, giving a range of 0:00 (instant alarm) up to 60:60 (61 minutes total).
 
 **Alarm Tone**
-Choose from 10 different alarm sounds. They are all generated electronically through the speaker:
-- Double Beep, Rising Arpeggio, Steady Alarm, Warble, Fast Triple-Beep, Siren, Ship Bell, SOS Pattern, Descending Scale, Urgent Stutter
+Choose from 20 alarm tones divided into two colour-coded groups:
+
+*🔴 Alert — piercing and attention-grabbing (tones 0–9)*
+
+| # | Name | Character |
+|---|---|---|
+| 0 | Double Beep | Classic two-pulse beep |
+| 1 | Triple Beep | Three rapid high-pitched pulses |
+| 2 | Stutter | Very fast high-frequency burst |
+| 3 | Warble | Two-tone alternating warble |
+| 4 | Siren | Stepped sweep up and back down |
+| 5 | Fast Pulse | Extremely rapid high pulses |
+| 6 | Two-Tone | Rapid alternation between two high pitches |
+| 7 | Chirp | Ascending chirp bursts in pairs |
+| 8 | Dive Bomb | Sharp descend from very high to mid frequency |
+| 9 | Industrial | Slow heavy pulses at high frequency |
+
+*🔵 Calm — melodic and less intrusive (tones 10–19)*
+
+| # | Name | Character |
+|---|---|---|
+| 10 | Rise | Gentle ascending arpeggio |
+| 11 | Descend | Gentle descending scale |
+| 12 | Ship Bell | Two soft bell strikes |
+| 13 | Gentle Chime | Three-note musical chime (C–E–G) |
+| 14 | Soft Arpeggio | Slow upward C major chord |
+| 15 | Lullaby | Low, slow two-note pattern with long pauses |
+| 16 | Trill | A/B alternating trill, flute-like |
+| 17 | Pentatonic | Five-note pentatonic scale ascending |
+| 18 | Eve Bell | Single soft tone with a slow decay pattern |
+| 19 | Slow Waltz | Three gentle notes in waltz rhythm |
+
+Each tone has a **▶ preview button** beneath it. Tapping it plays that tone through your phone's own speaker so you can hear exactly what it sounds like before committing. A **STOP PREVIEW** bar appears while a tone is playing so you can cut it off at any time.
 
 **Lid-Open Behaviour**
 This controls what happens if the centrifuge lid is opened *while the countdown is already running*:
@@ -278,9 +357,17 @@ Hold down the **BOOT** button on the ESP32 board while clicking Upload in Arduin
 - Make sure you typed `http://192.168.4.1` — some browsers auto-add `https://` which will not work here; you must use `http://`
 - Try a different browser
 
+### Speaker produces a hiss or whine when no alarm is playing
+
+This is caused by the ESP32's LEDC peripheral holding a DC voltage on the audio output pin at idle. The fix is to install the audio filter components (C2, and optionally R1 + C1) described in the wiring section.
+
+- **First step:** Install C2 (10µF electrolytic capacitor) in series on the signal wire between GPIO25 and PAM8403 INL. Double-check polarity — (+) toward GPIO25, (−) toward PAM8403. This alone should resolve or significantly reduce the hiss.
+- **If hiss persists:** Add R1 (10kΩ resistor, in-line before C2) and C1 (100nF ceramic capacitor, from the R1/C2 junction to GND). These must be added together — C1 alone without R1 is not effective.
+
 ### No sound from the speaker
 
-- Confirm GPIO25 is connected to PAM8403 INL, and that the PAM8403 is powered from the ESP32's 5V and GND pins
+- Confirm the audio signal path is wired correctly: GPIO25 → (R1 if fitted) → (C1 to GND if fitted) → C2 (+) → C2 (−) → PAM8403 INL
+- Check that the PAM8403 is powered from the ESP32's 5V and GND pins
 - Check that the speaker is wired to L OUT+ and L OUT− on the PAM8403
 - The alarm will only sound after the countdown completes — make sure the timer has actually expired
 - WiFi must be off for audio to work. If the timer was triggered before the 5-minute AP window closed, something unexpected occurred — try reflashing the sketch
