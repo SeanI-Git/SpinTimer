@@ -233,7 +233,7 @@ Arduino IDE doesn't know about ESP32 boards by default — you have to tell it w
 
 ### Connecting to the Configuration Portal
 
-Every time the ESP32 is powered on, it creates a temporary WiFi network for **5 minutes** so you can configure it.
+Every time the ESP32 is powered on, it creates a temporary WiFi network for **10 minutes** so you can configure it.
 
 1. Power on the ESP32 via USB-C
 2. On your phone or computer, open your WiFi settings
@@ -348,7 +348,7 @@ Hold down the **BOOT** button on the ESP32 board while clicking Upload in Arduin
 ### I can't find the `SpinTimer1` WiFi network
 
 - Make sure the ESP32 is powered on and the USB cable is data-capable (not charge-only)
-- The network is only available for 5 minutes after power-on — unplug and replug to reopen the window
+- The network is only available for 10 minutes after power-on — unplug and replug to reopen the window
 - Try moving closer to the ESP32
 
 ### The web page at 192.168.4.1 won't load
