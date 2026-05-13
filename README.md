@@ -13,7 +13,7 @@ No phone app, no cloud, no subscription. Just plug it in, configure it once over
 - 🎵 **In-browser tone preview** — audition any tone through your phone's speaker before saving, directly from the web UI
 - 💡 **Blue LED indicator** — blips on timer start, flashes during alarm
 - 🧲 **Magnetic reed switch trigger** — automatically starts when the centrifuge lid closes
-- 📶 **WiFi configuration portal** — opens for 5 minutes on power-up, then shuts off completely
+- 📶 **WiFi configuration portal** — opens for 10 minutes on power-up, then shuts off completely
 - 🔁 **3 lid-open behaviours** — Reset, Pause, or Pause-then-Reset if the lid opens mid-countdown
 - 💾 **Settings are saved** — configuration persists through power cycles
 - 🔒 **No persistent WiFi** — radio shuts down after configuration, ensuring reliable audio output
@@ -98,7 +98,7 @@ The 20 available tones are divided into two categories, both colour-coded in the
 
 ## WiFi Configuration
 
-On first power-up (and every subsequent power cycle), the ESP32 broadcasts a WiFi network for **5 minutes**:
+On first power-up (and every subsequent power cycle), the ESP32 broadcasts a WiFi network for **10 minutes**:
 
 - **SSID:** `SpinTimer1`
 - **Password:** `WashoeZephyr`
@@ -106,7 +106,7 @@ On first power-up (and every subsequent power cycle), the ESP32 broadcasts a WiF
 
 Connect any phone or computer to that network and open the address above in a browser to configure the timer duration, alarm tone, and lid-open behaviour. Each tone has a ▶ preview button that plays the sound through your device's own speaker so you can audition it before saving.
 
-> **To reconfigure:** simply unplug and replug the USB-C cable. The 5-minute window reopens on every boot.
+> **To reconfigure:** simply unplug and replug the USB-C cable. The 10-minute window reopens on every boot.
 
 ---
 
