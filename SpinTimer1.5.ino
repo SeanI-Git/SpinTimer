@@ -22,7 +22,7 @@
 // ---------------------------------------------------------------------------
 const char* AP_SSID = "SpinTimer1";
 const char* AP_PASS = "WashoeZephyr";
-const unsigned long AP_TIMEOUT_MS = 5UL * 60UL * 1000UL; // 5 minutes
+const unsigned long AP_TIMEOUT_MS = 10UL * 60UL * 1000UL; // 10 minutes
 
 // ---------------------------------------------------------------------------
 // LEDC (PWM) for audio — ESP32 Arduino core 3.x uses pin-based API
