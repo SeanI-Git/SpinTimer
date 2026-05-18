@@ -55,10 +55,11 @@ SystemState state          = STATE_AP_MODE;
 unsigned long apStartMs    = 0;
 
 // Settings (persisted)
-int          cfgMinutes    = 5;
-int          cfgSeconds    = 0;
-int          cfgTone       = 0;        // 0-9
-LidBehaviour cfgLidBehav  = LID_RESET;
+int          cfgMinutes       = 5;
+int          cfgSeconds       = 0;
+int          cfgTone          = 0;        // 0-9
+LidBehaviour cfgLidBehav     = LID_RESET;
+bool         cfgLedDuringCount = false;   // false=off, true=solid on while counting
 
 // Countdown
 unsigned long countdownMs  = 0;        // total countdown in ms
@@ -209,6 +210,7 @@ void loop() {
     // Resume
     countStartMs = millis();
     state = STATE_COUNTING;
+    setLED(cfgLedDuringCount);
     Serial.println("Resuming countdown.");
   }
 
@@ -246,24 +248,24 @@ const char HTML_PAGE[] PROGMEM = R"rawhtml(
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>SpinTimer1</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700&display=swap');
+  
   :root{--bg:#0a0f1a;--panel:#111827;--accent:#3b82f6;--accent2:#60a5fa;--text:#e2e8f0;--dim:#64748b;--green:#22c55e;}
   *{box-sizing:border-box;margin:0;padding:0;}
-  body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monospace;
+  body{background:var(--bg);color:var(--text);font-family:'Courier New',monospace;
        min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:24px 16px;}
-  h1{font-family:'Orbitron',sans-serif;font-size:1.6rem;color:var(--accent2);
+  h1{font-family:'Courier New',monospace;font-size:1.6rem;color:var(--accent2);
      letter-spacing:.15em;text-transform:uppercase;margin-bottom:4px;}
   .sub{color:var(--dim);font-size:.75rem;letter-spacing:.1em;margin-bottom:28px;}
   .card{background:var(--panel);border:1px solid #1e293b;border-radius:12px;
         padding:22px 24px;width:100%;max-width:420px;margin-bottom:18px;}
-  .card h2{font-family:'Orbitron',sans-serif;font-size:.8rem;color:var(--accent);
+  .card h2{font-family:'Courier New',monospace;font-size:.8rem;color:var(--accent);
            letter-spacing:.12em;text-transform:uppercase;margin-bottom:16px;
            border-bottom:1px solid #1e293b;padding-bottom:8px;}
   .row{display:flex;gap:16px;align-items:flex-end;}
   .field{flex:1;display:flex;flex-direction:column;gap:6px;}
   label{font-size:.7rem;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;}
   select{background:#0f172a;border:1px solid #334155;color:var(--text);
-         border-radius:6px;padding:10px 8px;font-family:'Share Tech Mono',monospace;
+         border-radius:6px;padding:10px 8px;font-family:'Courier New',monospace;
          font-size:.95rem;width:100%;cursor:pointer;appearance:none;text-align:center;}
   select:focus{outline:none;border-color:var(--accent);}
   .colon{font-size:1.4rem;color:var(--accent);padding-bottom:6px;flex-shrink:0;}
@@ -283,11 +285,11 @@ const char HTML_PAGE[] PROGMEM = R"rawhtml(
   .tone-btn.calm:hover{border-color:#3b82f6;color:#93c5fd;background:#0a1628;}
   .tone-btn.calm.active{background:#1e3a5f;border-color:#3b82f6;color:#fff;}
   /* Shared tone button base */
-  .tone-btn{border-radius:6px;padding:7px 2px;font-family:'Share Tech Mono',monospace;
+  .tone-btn{border-radius:6px;padding:7px 2px;font-family:'Courier New',monospace;
             font-size:.72rem;cursor:pointer;transition:all .15s;text-align:center;width:100%;}
   /* Preview buttons */
   .prev-btn{border-radius:5px;padding:4px 2px;font-size:.7rem;cursor:pointer;
-            transition:all .15s;text-align:center;width:100%;font-family:'Share Tech Mono',monospace;}
+            transition:all .15s;text-align:center;width:100%;font-family:'Courier New',monospace;}
   .prev-btn.alert-p{background:#0d0202;border:1px solid #450a0a;color:#f87171;}
   .prev-btn.alert-p:hover{border-color:#7f1d1d;background:#1a0505;}
   .prev-btn.calm-p {background:#020508;border:1px solid #0c1f3a;color:#60a5fa;}
@@ -297,7 +299,7 @@ const char HTML_PAGE[] PROGMEM = R"rawhtml(
   .stop-bar{display:none;width:100%;max-width:420px;margin-bottom:12px;}
   .stop-bar.visible{display:block;}
   .stop-btn{width:100%;padding:10px;background:#7f1d1d;border:1px solid #ef4444;
-            border-radius:8px;color:#fca5a5;font-family:'Share Tech Mono',monospace;
+            border-radius:8px;color:#fca5a5;font-family:'Courier New',monospace;
             font-size:.85rem;cursor:pointer;letter-spacing:.05em;}
   .stop-btn:hover{background:#991b1b;}
   /* Behaviour */
@@ -311,9 +313,16 @@ const char HTML_PAGE[] PROGMEM = R"rawhtml(
   .behav-label{font-size:.8rem;line-height:1.4;}
   .behav-label strong{display:block;color:var(--text);margin-bottom:2px;}
   .behav-label span{color:var(--dim);font-size:.72rem;}
+  /* Quick-set */
+  .quick-row{display:flex;gap:10px;}
+  .quick-btn{flex:1;padding:12px 4px;background:#0f172a;border:1px solid #334155;
+             border-radius:8px;color:var(--accent2);font-family:'Courier New',monospace;
+             font-size:.85rem;letter-spacing:.08em;cursor:pointer;transition:all .15s;text-align:center;}
+  .quick-btn:hover{border-color:var(--accent);background:#1e293b;color:#fff;}
+  .quick-btn:active{background:var(--accent);border-color:var(--accent2);color:#fff;}
   /* Save */
   .save-btn{width:100%;max-width:420px;padding:14px;background:var(--accent);
-            border:none;border-radius:8px;color:#fff;font-family:'Orbitron',sans-serif;
+            border:none;border-radius:8px;color:#fff;font-family:'Courier New',monospace;
             font-size:.9rem;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;
             transition:background .15s;}
   .save-btn:hover{background:var(--accent2);}
@@ -326,6 +335,16 @@ const char HTML_PAGE[] PROGMEM = R"rawhtml(
 <body>
 <h1>&#9881; SpinTimer1</h1>
 <div class="sub">CENTRIFUGE TIMER CONFIGURATION</div>
+
+<!-- Quick-Set Presets -->
+<div class="card">
+  <h2>Quick Set</h2>
+  <div class="quick-row">
+    <button class="quick-btn" onclick="quickSet(3,0)">3 MIN</button>
+    <button class="quick-btn" onclick="quickSet(5,0)">5 MIN</button>
+    <button class="quick-btn" onclick="quickSet(8,0)">8 MIN</button>
+  </div>
+</div>
 
 <!-- Timer Duration -->
 <div class="card">
@@ -383,6 +402,27 @@ const char HTML_PAGE[] PROGMEM = R"rawhtml(
       <div class="behav-label">
         <strong>Pause then Reset</strong>
         <span>First lid opening pauses. If closed then opened again, resets.</span>
+      </div>
+    </label>
+  </div>
+</div>
+
+<!-- LED During Countdown -->
+<div class="card">
+  <h2>LED During Countdown</h2>
+  <div class="behav-list">
+    <label class="behav-opt" id="l0">
+      <input type="radio" name="ledcount" value="0">
+      <div class="behav-label">
+        <strong>LED Off</strong>
+        <span>LED stays off while the countdown is running.</span>
+      </div>
+    </label>
+    <label class="behav-opt" id="l1">
+      <input type="radio" name="ledcount" value="1">
+      <div class="behav-label">
+        <strong>LED On &mdash; Solid</strong>
+        <span>LED stays solid on while the countdown is running.</span>
       </div>
     </label>
   </div>
@@ -526,6 +566,8 @@ fetch('/config').then(r=>r.json()).then(d=>{
   if(btn) btn.classList.add('active');
   const radio=document.querySelector(`input[name=behav][value="${d.behav}"]`);
   if(radio){radio.checked=true;updateBehavHighlight(d.behav);}
+  const ledRadio=document.querySelector(`input[name=ledcount][value="${d.ledcount}"]`);
+  if(ledRadio){ledRadio.checked=true;updateLedHighlight(d.ledcount);}
 });
 
 // ---------------------------------------------------------------------------
@@ -541,6 +583,26 @@ function updateBehavHighlight(v){
 }
 
 // ---------------------------------------------------------------------------
+// LED during countdown highlight
+// ---------------------------------------------------------------------------
+document.querySelectorAll('input[name=ledcount]').forEach(r=>{
+  r.addEventListener('change',()=>updateLedHighlight(r.value));
+});
+function updateLedHighlight(v){
+  ['l0','l1'].forEach((id,i)=>{
+    $(id).classList.toggle('active',String(i)===String(v));
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Quick-set presets
+// ---------------------------------------------------------------------------
+function quickSet(mins,secs){
+  $('mins').value=mins;
+  $('secs').value=secs;
+}
+
+// ---------------------------------------------------------------------------
 // Save
 // ---------------------------------------------------------------------------
 function save(){
@@ -551,10 +613,12 @@ function save(){
   const tone=toneEl?parseInt(toneEl.dataset.i):0;
   const behavEl=document.querySelector('input[name=behav]:checked');
   const behav=behavEl?parseInt(behavEl.value):0;
+  const ledEl=document.querySelector('input[name=ledcount]:checked');
+  const ledcount=ledEl?parseInt(ledEl.value):0;
   fetch('/save',{
     method:'POST',
     headers:{'Content-Type':'application/x-www-form-urlencoded'},
-    body:`minutes=${mins}&seconds=${secs}&tone=${tone}&behav=${behav}`
+    body:`minutes=${mins}&seconds=${secs}&tone=${tone}&behav=${behav}&ledcount=${ledcount}`
   }).then(r=>r.text()).then(()=>{
     const m=$('msg');
     m.className='msg ok';m.textContent='\u2713 Settings saved! Close the lid to start timing.';
@@ -579,20 +643,22 @@ void setupWebServer() {
     String json = "{\"minutes\":" + String(cfgMinutes) +
                   ",\"seconds\":" + String(cfgSeconds) +
                   ",\"tone\":"    + String(cfgTone)    +
-                  ",\"behav\":"   + String((int)cfgLidBehav) + "}";
+                  ",\"behav\":"   + String((int)cfgLidBehav) +
+                  ",\"ledcount\":" + String(cfgLedDuringCount ? 1 : 0) + "}";
     server.send(200, "application/json", json);
   });
 
   // Save config
   server.on("/save", HTTP_POST, []() {
-    if (server.hasArg("minutes")) cfgMinutes  = constrain(server.arg("minutes").toInt(), 0, 60);
-    if (server.hasArg("seconds")) cfgSeconds  = constrain(server.arg("seconds").toInt(), 0, 60);
-    if (server.hasArg("tone"))    cfgTone     = constrain(server.arg("tone").toInt(),    0, 19);
-    if (server.hasArg("behav"))   cfgLidBehav = (LidBehaviour)constrain(server.arg("behav").toInt(), 0, 2);
+    if (server.hasArg("minutes"))  cfgMinutes        = constrain(server.arg("minutes").toInt(), 0, 60);
+    if (server.hasArg("seconds"))  cfgSeconds        = constrain(server.arg("seconds").toInt(), 0, 60);
+    if (server.hasArg("tone"))     cfgTone           = constrain(server.arg("tone").toInt(),    0, 19);
+    if (server.hasArg("behav"))    cfgLidBehav       = (LidBehaviour)constrain(server.arg("behav").toInt(), 0, 2);
+    if (server.hasArg("ledcount")) cfgLedDuringCount = server.arg("ledcount").toInt() == 1;
     savePrefs();
     server.send(200, "text/plain", "OK");
-    Serial.printf("Config saved: %dm %ds, tone %d, behav %d\n",
-                  cfgMinutes, cfgSeconds, cfgTone, (int)cfgLidBehav);
+    Serial.printf("Config saved: %dm %ds, tone %d, behav %d, ledcount %d\n",
+                  cfgMinutes, cfgSeconds, cfgTone, (int)cfgLidBehav, (int)cfgLedDuringCount);
   });
 
   server.begin();
@@ -636,6 +702,8 @@ void enterCounting() {
   state = STATE_COUNTING;
   // Brief confirmation blip — lets the user know the timer is running
   setLED(true);  delay(500);  setLED(false);
+  // Apply counting LED preference after blip
+  setLED(cfgLedDuringCount);
   Serial.printf("State: COUNTING — %lu ms\n", countdownMs);
 
   // Edge case: 0:00 → instant alarm
@@ -786,10 +854,11 @@ void blinkLED(int times, int onMs, int offMs) {
 // ---------------------------------------------------------------------------
 void loadPrefs() {
   prefs.begin("spintimer", true);  // read-only
-  cfgMinutes  = prefs.getInt("minutes", 5);
-  cfgSeconds  = prefs.getInt("seconds", 0);
-  cfgTone     = prefs.getInt("tone",    0);
-  cfgLidBehav = (LidBehaviour)prefs.getInt("behav", 0);
+  cfgMinutes        = prefs.getInt("minutes", 5);
+  cfgSeconds        = prefs.getInt("seconds", 0);
+  cfgTone           = prefs.getInt("tone",    0);
+  cfgLidBehav       = (LidBehaviour)prefs.getInt("behav", 0);
+  cfgLedDuringCount = prefs.getBool("ledcount", false);
   prefs.end();
   Serial.printf("Prefs loaded: %dm %ds, tone %d, behav %d\n",
                 cfgMinutes, cfgSeconds, cfgTone, (int)cfgLidBehav);
@@ -801,5 +870,7 @@ void savePrefs() {
   prefs.putInt("seconds", cfgSeconds);
   prefs.putInt("tone",    cfgTone);
   prefs.putInt("behav",   (int)cfgLidBehav);
+  prefs.putBool("ledcount", cfgLedDuringCount);
   prefs.end();
 }
+
