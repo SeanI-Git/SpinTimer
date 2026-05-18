@@ -1,5 +1,5 @@
 // =============================================================================
-//  SpinTimer1 — ESP32 Centrifuge Lid Timer
+//  SpinTimer — ESP32 Centrifuge Lid Timer
 //  Hardware: ESP32-WROOM-32, PAM8403 amp on GPIO25, Blue LED on GPIO32,
 //            NO Reed Switch on GPIO27 (internal pull-up, GND on leg 2)
 // =============================================================================
