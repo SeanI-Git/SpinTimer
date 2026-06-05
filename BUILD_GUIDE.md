@@ -26,9 +26,9 @@ This guide walks you through building SpinTimer1 from scratch — from ordering 
 | Qty | Component | Notes |
 |---|---|---|
 | 1 | ESP32-WROOM-32 development board | Any standard ESP32 DevKit with USB-C or Micro-USB will work |
-| 1 | NO Magnetic Reed Switch | "NO" means Normally Open — the circuit is open until a magnet gets close |
-| 1 | PAM8403 mini amplifier board | A tiny pre-built audio amplifier module, widely available |
-| 1 | 28mm micro speaker | Match impedance to your PAM8403 (typically 4Ω or 8Ω) |
+| 1 | NO Magnetic Reed Switch | https://a.co/d/0f0ibyzz "NO" means Normally Open — the circuit is open until a magnet gets close |
+| 1 | PAM8403 mini amplifier board | https://a.co/d/0cDjkPHo A tiny pre-built audio amplifier module, widely available |
+| 1 | 28mm micro speaker | https://a.co/d/099b3lVG Match impedance to your PAM8403 (typically 4Ω or 8Ω) |
 | 1 | Blue LED | Forward voltage 3.0V–3.2V |
 | 1 | 220Ω resistor | Protects the LED from excess current |
 | 1 | 10µF electrolytic capacitor | ≥10V rating. DC-blocking capacitor on the audio signal path — primary fix for idle speaker hiss. **Observe polarity** (see wiring section). |
@@ -37,7 +37,7 @@ This guide walks you through building SpinTimer1 from scratch — from ordering 
 | — | Jumper wires or hookup wire | For connecting components together |
 | — | Breadboard (optional) | Useful for prototyping before soldering |
 | 1 | USB-C cable + 5V USB power adapter | Standard phone charger works fine |
-| 1 | Small magnet | To be attached to the centrifuge lid |
+| 1 | Small magnet |  https://a.co/d/04oFBVdV To be attached to the centrifuge lid |
 
 > **On the audio filter components:** The 10µF electrolytic capacitor (C2) is the primary noise fix and should always be installed. The 10kΩ resistor (R1) and 100nF ceramic capacitor (C1) are an optional add-on — they reduce high-frequency PWM switching noise further, but are only needed if hiss persists after installing C2. R1 and C1 must always be used together; C1 alone without R1 does almost nothing.
 
